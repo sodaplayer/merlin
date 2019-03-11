@@ -100,11 +100,6 @@ val print_loc: formatter -> t -> unit
 val print_locs: formatter -> t list -> unit
 
 
-(** {1 Toplevel-specific location highlighting} *)
-
-val highlight_terminfo:
-  Lexing.lexbuf -> formatter -> t list -> unit
-
 
 (** {1 Reporting errors and warnings} *)
 
@@ -268,7 +263,7 @@ exception Already_displayed_error
 (** Raising [Already_displayed_error] signals an error which has already been
    printed. The exception will be caught, but nothing will be printed *)
 
-val raise_errorf: ?loc:t -> ?sub:msg list ->
+val raise_errorf: ?loc:t -> ?sub:msg list -> ?source:error_source ->
   ('a, Format.formatter, unit, 'b) format4 -> 'a
 
 val report_exception: formatter -> exn -> unit
