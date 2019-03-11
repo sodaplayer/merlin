@@ -213,8 +213,8 @@ type state =
   {
     active: Bitfield.t;
     error: Bitfield.t;
-    alerts: (Misc.Stdlib.String.Set.t * bool); (* false:set complement *)
-    alert_errors: (Misc.Stdlib.String.Set.t * bool); (* false:set complement *)
+    alerts: (Std.String.Set.t * bool); (* false:set complement *)
+    alert_errors: (Std.String.Set.t * bool); (* false:set complement *)
   }
 
 let current =
@@ -222,8 +222,8 @@ let current =
     {
       active = Bitfield.full;
       error = Bitfield.empty;
-      alerts = (Misc.Stdlib.String.Set.empty, false); (* all enabled *)
-      alert_errors = (Misc.Stdlib.String.Set.empty, true); (* all soft *)
+      alerts = (Std.String.Set.empty, false); (* all enabled *)
+      alert_errors = (Std.String.Set.empty, true); (* all soft *)
     }
 
 let disabled = ref false
@@ -244,12 +244,12 @@ let is_error x = not !disabled && let x = number x in not (is_disabled x) && Bit
 let alert_is_active {kind; _} =
   not !disabled &&
   let (set, pos) = (!current).alerts in
-  Misc.Stdlib.String.Set.mem kind set = pos
+  Std.String.Set.mem kind set = pos
 
 let alert_is_error {kind; _} =
   not !disabled &&
   let (set, pos) = (!current).alert_errors in
-  Misc.Stdlib.String.Set.mem kind set = pos
+  Std.String.Set.mem kind set = pos
 
 let mk_lazy f =
   let state = backup () in
@@ -270,15 +270,15 @@ let set_alert ~error ~enable s =
   let upd =
     match s with
     | "all" ->
-        (Misc.Stdlib.String.Set.empty, not enable)
+        (Std.String.Set.empty, not enable)
     | s ->
         let (set, pos) =
           if error then (!current).alert_errors else (!current).alerts
         in
         let f =
           if enable = pos
-          then Misc.Stdlib.String.Set.add
-          else Misc.Stdlib.String.Set.remove
+          then Std.String.Set.add
+          else Std.String.Set.remove
         in
         (f s set, pos)
   in
@@ -627,6 +627,8 @@ let message = function
          which shadows the existing one.\n\
          Hint: Did you mean 'type %s = unit'?" name
 ;;
+
+let nerrors = ref 0
 
 type reporting_information =
   { id : string

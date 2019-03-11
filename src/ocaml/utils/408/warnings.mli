@@ -22,7 +22,7 @@ type loc = {
 type t =
   | Comment_start                           (*  1 *)
   | Comment_not_end                         (*  2 *)
-  | Deprecated of string * loc * loc        (*  3 *)
+(*| Deprecated --> alert "deprecated" *)    (*  3 *)
   | Fragile_match of string                 (*  4 *)
   | Partial_application                     (*  5 *)
   | Labels_omitted of string list           (*  6 *)
@@ -60,7 +60,7 @@ type t =
   | Unused_extension of string * bool * bool * bool (* 38 *)
   | Unused_rec_flag                         (* 39 *)
   | Name_out_of_scope of string * string list * bool   (* 40 *)
-  | Ambiguous_name of string list * string list * bool (* 41 *)
+  | Ambiguous_name of string list * string list *  bool * string (* 41 *)
   | Disambiguated_name of string            (* 42 *)
   | Nonoptional_label of string             (* 43 *)
   | Open_shadow_identifier of string * string (* 44 *)
@@ -82,9 +82,21 @@ type t =
   | Unused_module of string                 (* 60 *)
   | Unboxable_type_in_prim_decl of string   (* 61 *)
   | Constraint_on_gadt                      (* 62 *)
+  | Erroneous_printed_signature of string   (* 63 *)
+  | Unsafe_without_parsing                  (* 64 *)
+  | Redefining_unit of string               (* 65 *)
+  | Unused_open_bang of string              (* 66 *)
 ;;
 
+type alert = {kind:string; message:string; def:loc; use:loc}
+
 val parse_options : bool -> string -> unit;;
+
+val parse_alert_option: string -> unit
+  (** Disable/enable alerts based on the parameter to the -alert
+      command-line option.  Raises [Arg.Bad] if the string is not a
+      valid specification.
+  *)
 
 val without_warnings : (unit -> 'a) -> 'a
 
@@ -95,13 +107,14 @@ val defaults_w : string;;
 val defaults_warn_error : string;;
 
 type reporting_information =
-  { number : int
+  { id : string
   ; message : string
   ; is_error : bool
   ; sub_locs : (loc * string) list;
   }
 
 val report : t -> [ `Active of reporting_information | `Inactive ]
+val report_alert : alert -> [ `Active of reporting_information | `Inactive ]
 
 exception Errors;;
 
