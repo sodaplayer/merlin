@@ -129,9 +129,12 @@ let print_updating_num_loc_lines ppf f arg =
 (* Printing locations, e.g. 'File "foo.ml", line 3, characters 10-12' *)
 
 let rewrite_absolute_path path =
+  (*
   match Misc.get_build_path_prefix_map () with
   | None -> path
   | Some map -> Build_path_prefix_map.rewrite map path
+  *)
+  path
 
 let absolute_path s = (* This function could go into Filename *)
   let open Filename in

@@ -24,7 +24,7 @@ open Parsetree
 open Ast_helper
 open Location
 
-module String = Misc.Stdlib.String
+module String = Std.String
 
 type mapper = {
   attribute: mapper -> attribute -> attribute;
@@ -745,7 +745,7 @@ let get_cookie k =
   with Not_found -> None
 
 let set_cookie k v =
-  cookies := String.Map.add k v !cookies
+  cookies := String.Map.add ~key:k ~data:v !cookies
 
 let tool_name_ref = ref "_none_"
 
@@ -893,7 +893,7 @@ module PpxContext = struct
           let l = get_list (get_pair get_string (fun x -> x)) payload in
           cookies :=
             List.fold_left
-              (fun s (k, v) -> String.Map.add k v s) String.Map.empty
+              (fun s (key, data) -> String.Map.add ~key ~data s) String.Map.empty
               l
       | _ ->
           ()
