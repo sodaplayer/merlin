@@ -809,9 +809,10 @@ The precedences must be listed from low to high.
 %nonassoc prec_unary_minus prec_unary_plus /* unary - */
 %nonassoc prec_constant_constructor     /* cf. simple_expr (C versus C x) */
 %nonassoc prec_constr_appl              /* above AS BAR COLONCOLON COMMA */
-%nonassoc below_HASH
-%nonassoc HASH                         /* simple_expr/toplevel_directive */
-%left     HASHOP
+%left     prec_escape
+%nonassoc below_SHARP
+%nonassoc SHARP                        /* simple_expr/toplevel_directive */
+%left     SHARPOP
 %nonassoc below_DOT
 %nonassoc DOT DOTOP
 /* Finally, the first tokens of simple_expr are above everything else. */
@@ -819,6 +820,7 @@ The precedences must be listed from low to high.
           LBRACE LBRACELESS LBRACKET LBRACKETBAR LIDENT LPAREN
           NEW PREFIXOP STRING TRUE UIDENT
           LBRACKETPERCENT
+          DOTLESS DOTTILDE GREATERDOT QUESTIONQUESTION
 
 
 /* Entry points */
@@ -869,7 +871,7 @@ The precedences must be listed from low to high.
   { text_csig $startpos @ [$1] }
 
 (* Using this %inline definition means that we do not control precisely
-   when [mark_rhs_docs] is called, but I don't think this matters. *)
+   when [mark_rhs_docs] is called, but I dont think this matters. *)
 %inline mark_rhs_docs(symb): symb
   { mark_rhs_docs $startpos $endpos;
     $1 }
@@ -1045,7 +1047,7 @@ reversed_preceded_or_separated_nonempty_llist(delimiter, X):
   xs = rev(reversed_preceded_or_separated_nonempty_llist(delimiter, X))
     { xs }
 
-(* [bar_llist(X)] recognizes a nonempty list of [X]'s, separated with BARs,
+(* [bar_llist(X)] recognizes a nonempty list of [X]s, separated with BARs,
    with an optional leading BAR. We assume that [X] is itself parameterized
    with an opening symbol, which can be [epsilon] or [BAR]. *)
 
@@ -1182,7 +1184,8 @@ parse_pattern:
 
 (* Functor arguments appear in module expressions and module types. *)
 
-%inline functor_args [@recovery []]:
+(* There was an inline here, but I removed it. *)
+functor_args [@recovery []]:
   reversed_nonempty_llist(functor_arg)
     { $1 }
     (* Produce a reversed list on purpose;
@@ -1323,7 +1326,7 @@ structure [@recovery []]:
 ;
 
 (* A structure item. *)
-structure_item:
+%public structure_item:
     let_bindings(ext)
       { val_of_let_bindings ~loc:$sloc $1 }
   | mkstr(
@@ -2141,8 +2144,8 @@ let_pattern [@recovery default_pattern ()]:
       { $1 }
 ;
 
-expr [@recovery default_expr ()]:
-    simple_expr %prec below_HASH
+%public expr [@recovery default_expr ()]:
+    simple_expr %prec below_SHARP
       { $1 }
   | expr_attrs
       { let desc, attrs = $1 in
@@ -2217,9 +2220,9 @@ expr [@recovery default_expr ()]:
   | FOR ext_attributes pattern EQUAL seq_expr direction_flag seq_expr DO
     seq_expr DONE
       { Pexp_for($3, $merloc(4,5), $merloc(6,7), $6, $merloc(8,9)), $2 }
-  | ASSERT ext_attributes simple_expr %prec below_HASH
+  | ASSERT ext_attributes simple_expr %prec below_SHARP
       { Pexp_assert $3, $2 }
-  | LAZY ext_attributes simple_expr %prec below_HASH
+  | LAZY ext_attributes simple_expr %prec below_SHARP
       { Pexp_lazy $3, $2 }
   | OBJECT ext_attributes class_structure END
       { Pexp_object $3, $2 }
@@ -2231,9 +2234,9 @@ expr [@recovery default_expr ()]:
       { Pexp_apply($1, $2) }
   | expr_comma_list %prec below_COMMA
       { Pexp_tuple($1) }
-  | mkrhs(constr_longident) simple_expr %prec below_HASH
+  | mkrhs(constr_longident) simple_expr %prec below_SHARP
       { Pexp_construct($1, Some $2) }
-  | name_tag simple_expr %prec below_HASH
+  | name_tag simple_expr %prec below_SHARP
       { Pexp_variant($1, Some $2) }
   | e1 = expr op = op(infix_operator) e2 = expr
       { mkinfix e1 op e2 }
@@ -2243,7 +2246,7 @@ expr [@recovery default_expr ()]:
       { mkuplus ~oploc:$loc($1) $1 $2 }
 ;
 
-simple_expr:
+%public simple_expr:
   | LPAREN seq_expr RPAREN
       { reloc_exp ~loc:$sloc $2 }
   | LPAREN seq_expr error
@@ -2339,9 +2342,9 @@ simple_expr:
         Pexp_open(od, mkexp ~loc:$sloc (Pexp_override $4)) }
   | mod_longident DOT LBRACELESS object_expr_content error
       { unclosed "{<" $loc($3) ">}" $loc($5) }
-  | simple_expr HASH mkrhs(label)
+  | simple_expr SHARP mkrhs(label)
       { Pexp_send($1, $3) }
-  | simple_expr op(HASHOP) simple_expr
+  | simple_expr op(SHARPOP) simple_expr
       { mkinfix $1 $2 $3 }
   | extension
       { Pexp_extension $1 }
@@ -2404,9 +2407,9 @@ simple_expr:
       { unclosed "(" $loc($3) ")" $loc($8) }
 ;
 labeled_simple_expr:
-    simple_expr %prec below_HASH
+    simple_expr %prec below_SHARP
       { (Nolabel, $1) }
-  | LABEL simple_expr %prec below_HASH
+  | LABEL simple_expr %prec below_SHARP
       { (Labelled $1, $2) }
   | TILDE label = LIDENT
       { let loc = $loc(label) in
@@ -2414,7 +2417,7 @@ labeled_simple_expr:
   | QUESTION label = LIDENT
       { let loc = $loc(label) in
         (Optional label, mkexpvar ~loc label) }
-  | OPTLABEL simple_expr %prec below_HASH
+  | OPTLABEL simple_expr %prec below_SHARP
       { (Optional $1, $2) }
 ;
 %inline lident_list:
@@ -2522,7 +2525,8 @@ strict_binding:
   | LPAREN TYPE lident_list RPAREN fun_binding
       { mk_newtypes ~loc:$sloc $3 $5 }
 ;
-%inline match_cases [@recovery []]:
+(* There was an inline here, but I removed it. *)
+match_cases [@recovery []]:
   xs = preceded_or_separated_nonempty_llist(BAR, match_case)
     { xs }
 ;
@@ -2614,7 +2618,7 @@ type_constraint:
    is code in typing/typecore.ml to this end). Unfortunately, in the
    definition of [let_binding_body], we cannot allow [pattern]. That would
    create a shift/reduce conflict: upon seeing LET EXCEPTION ..., the parser
-   wouldn't know whether this is the beginning of a LET EXCEPTION construct or
+   wouldnt know whether this is the beginning of a LET EXCEPTION construct or
    the beginning of a LET construct whose pattern happens to begin with
    EXCEPTION. The conflict is avoided there by using [pattern_no_exn] in the
    definition of [let_binding_body].
@@ -2702,7 +2706,7 @@ simple_pattern_not_ident:
       { Ppat_construct($1, None) }
   | name_tag
       { Ppat_variant($1, None) }
-  | HASH mkrhs(type_longident)
+  | SHARP mkrhs(type_longident)
       { Ppat_type ($2) }
   | mkrhs(mod_longident) DOT simple_delimited_pattern
       { Ppat_open($1, $3) }
@@ -3031,15 +3035,15 @@ sig_exception_declaration:
 generalized_constructor_arguments:
     /*empty*/                     { (Pcstr_tuple [],None) }
   | OF constructor_arguments      { ($2,None) }
-  | COLON constructor_arguments MINUSGREATER atomic_type %prec below_HASH
+  | COLON constructor_arguments MINUSGREATER atomic_type %prec below_SHARP
                                   { ($2,Some $4) }
-  | COLON atomic_type %prec below_HASH
+  | COLON atomic_type %prec below_SHARP
                                   { (Pcstr_tuple [],Some $2) }
 ;
 
 constructor_arguments:
   | tys = inline_separated_nonempty_llist(STAR, atomic_type)
-    %prec below_HASH
+    %prec below_SHARP
       { Pcstr_tuple tys }
   | LBRACE label_declarations RBRACE
       { Pcstr_record $2 }
@@ -3246,7 +3250,7 @@ function_type:
  *)
 tuple_type:
   | ty = atomic_type
-    %prec below_HASH
+    %prec below_SHARP
       { ty }
   | mktyp(
       tys = separated_nontrivial_llist(STAR, atomic_type)
@@ -3259,7 +3263,7 @@ tuple_type:
    Atomic types include:
    - types between parentheses:           (int -> int)
    - first-class module types:            (module S)
-   - type variables:                      'a
+   - type variables:                      a
    - applications of type constructors:   int, int list, int option list
    - variant types:                       [`A]
  *)
@@ -3281,7 +3285,7 @@ atomic_type:
     | LESS GREATER
         { Ptyp_object ([], Closed) }
     | tys = actual_type_parameters
-      HASH
+      SHARP
       cid = mkrhs(class_longident)
         { Ptyp_class(cid, tys) }
     | LBRACKET tag_field RBRACKET
@@ -3441,7 +3445,7 @@ operator:
   | DOTOP LBRACKET RBRACKET LESSMINUS           { "."^ $1 ^ "[]<-" }
   | DOTOP LBRACE RBRACE                         { "."^ $1 ^"{}" }
   | DOTOP LBRACE RBRACE LESSMINUS               { "."^ $1 ^ "{}<-" }
-  | HASHOP                                      { $1 }
+  | SHARPOP                                      { $1 }
   | BANG                                        { "!" }
   | infix_operator                              { $1 }
 ;
@@ -3525,7 +3529,7 @@ class_longident:
 /* Toplevel directives */
 
 toplevel_directive:
-  HASH dir = mkrhs(ident)
+  SHARP dir = mkrhs(ident)
   arg = ioption(mk_directive_arg(toplevel_directive_argument))
     { mk_directive ~loc:$sloc dir arg }
 ;
@@ -3773,21 +3777,21 @@ lwt_bindings:
 %public expr:
 | lwt_bindings IN seq_expr
     { expr_of_lwt_bindings $1 $merloc(2,3) }
-| MATCH_LWT ext_attributes seq_expr WITH opt_bar match_cases
+| MATCH_LWT ext_attributes seq_expr WITH match_cases
     { let expr = mkexp_attrs
-          (Pexp_match(Fake.app Fake.Lwt.un_lwt $3, List.rev $6)) $2 in
+          (Pexp_match(Fake.app Fake.Lwt.un_lwt $3, List.rev $5)) $2 in
       Fake.app Fake.Lwt.in_lwt expr }
 | TRY_LWT ext_attributes seq_expr %prec below_WITH
     { reloc_exp (Fake.app Fake.Lwt.in_lwt $3) }
-| TRY_LWT ext_attributes seq_expr WITH opt_bar match_cases
+| TRY_LWT ext_attributes seq_expr WITH match_cases
     { mkexp_attrs
-        (Pexp_try(Fake.app Fake.Lwt.in_lwt $3, List.rev $6)) $2 }
+        (Pexp_try(Fake.app Fake.Lwt.in_lwt $3, List.rev $5)) $2 }
 | TRY_LWT ext_attributes seq_expr FINALLY_LWT seq_expr
     { Fake.app (Fake.app Fake.Lwt.finally_ $3) $5 }
-| TRY_LWT ext_attributes seq_expr WITH opt_bar match_cases FINALLY_LWT seq_expr
+| TRY_LWT ext_attributes seq_expr WITH match_cases FINALLY_LWT seq_expr
     { let expr = mkexp_attrs
-        (Pexp_try (Fake.app Fake.Lwt.in_lwt $3, List.rev $6)) $2 in
-      Fake.app (Fake.app Fake.Lwt.finally_ expr) $8 }
+        (Pexp_try (Fake.app Fake.Lwt.in_lwt $3, List.rev $5)) $2 in
+      Fake.app (Fake.app Fake.Lwt.finally_ expr) $7 }
 | WHILE_LWT ext_attributes seq_expr DO seq_expr DONE
   { let expr = Pexp_while ($3, Fake.(app Lwt.un_lwt $5)) in
     Fake.(app Lwt.to_lwt (mkexp_attrs expr $2)) }
