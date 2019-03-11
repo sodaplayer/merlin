@@ -1355,7 +1355,7 @@ and transl_signature ?(keep_warnings = false) env sg =
               env loc :: trem,
             rem,
             final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1379,7 +1379,7 @@ and transl_signature ?(keep_warnings = false) env sg =
                 Sig_module(md.md_id, Mp_present, d, rs, Exported))
               decls rem,
             final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1390,7 +1390,7 @@ and transl_signature ?(keep_warnings = false) env sg =
             mksig (Tsig_modtype mtd) env loc :: trem,
             sg :: rem,
             final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1400,7 +1400,7 @@ and transl_signature ?(keep_warnings = false) env sg =
             let (trem, rem, final_env) = transl_sig newenv srem in
             mksig (Tsig_open od) env loc :: trem,
             rem, final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1430,7 +1430,7 @@ and transl_signature ?(keep_warnings = false) env sg =
             mksig (Tsig_include incl) env loc :: trem,
             sg @ rem,
             final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1466,7 +1466,7 @@ and transl_signature ?(keep_warnings = false) env sg =
               :: trem
             in
             typedtree, sg, final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end
@@ -1503,7 +1503,7 @@ and transl_signature ?(keep_warnings = false) env sg =
               :: trem
             in
             typedtree, sg, final_env
-          | exception exn -
+          | exception exn ->
             Msupport.raise_error exn;
             transl_sig env srem
           end

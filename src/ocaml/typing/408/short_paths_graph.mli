@@ -32,7 +32,7 @@ module Path : sig
 
   type t = Path.t =
     | Pident of Ident.t
-    | Pdot of t * string * int
+    | Pdot of t * string
     | Papply of t * t
 
   val equal : t -> t -> bool

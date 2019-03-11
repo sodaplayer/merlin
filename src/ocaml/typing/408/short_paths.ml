@@ -1210,28 +1210,28 @@ module Shortest = struct
     String_map.iter
       (fun name typ ->
          if not (Type.hidden typ) then begin
-           let path = Path.Pdot(path, name, 0) in
+           let path = Path.Pdot(path, name) in
            process_type t height path typ
          end)
       types;
     String_map.iter
       (fun name clty ->
          if not (Class_type.hidden clty) then begin
-           let path = Path.Pdot(path, name, 0) in
+           let path = Path.Pdot(path, name) in
            process_class_type t height path clty
          end)
       class_types;
     String_map.iter
       (fun name mty ->
          if not (Module_type.hidden mty) then begin
-           let path = Path.Pdot(path, name, 0) in
+           let path = Path.Pdot(path, name) in
            process_module_type t height path mty
          end)
       module_types;
     String_map.iter
       (fun name md ->
          if not (Module.hidden md) then begin
-           let path = Path.Pdot(path, name, 0) in
+           let path = Path.Pdot(path, name) in
            process_module t height path seen md
          end)
       modules
@@ -1454,7 +1454,7 @@ module Shortest = struct
       Path.Papply(best fst, best snd)
 
     let path_dot parent name =
-      Path.Pdot(best parent, name.name, 0)
+      Path.Pdot(best parent, name.name)
 
     let is_visible_ident (type k) graph (kind : k kind) id =
       match kind with
@@ -1502,7 +1502,7 @@ module Shortest = struct
               let min = Height.one in
               let finished = false in
               Ident { kind; node; origin; best; min; max; finished }
-          | Path.Pdot(parent, name, _) ->
+          | Path.Pdot(parent, name) ->
               let parent = loop Module parent in
               let finished = false in
               let name_height =

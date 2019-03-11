@@ -5,18 +5,9 @@ module Ident = struct
 
   type t = Ident.t
 
-  let equal t1 t2 =
-    if Ident.binding_time t1 = 0 then
-      Ident.binding_time t2 = 0
-      && String.equal (Ident.name t1) (Ident.name t2)
-    else Ident.binding_time t1 = Ident.binding_time t2
+  let equal t1 t2 = Ident.equal t1 t2
 
-  let compare t1 t2 =
-    if Ident.binding_time t1 = 0 then
-      if Ident.binding_time t2 = 0 then
-        String.compare (Ident.name t1) (Ident.name t2)
-      else -1
-    else Pervasives.compare (Ident.binding_time t1) (Ident.binding_time t2)
+  let compare t1 t2 = Ident.compare t1 t2
 
   let name = Ident.name
 
@@ -32,7 +23,7 @@ module Path = struct
 
   type t = Path.t =
     | Pident of Ident.t
-    | Pdot of t * string * int
+    | Pdot of t * string
     | Papply of t * t
 
   open Path
@@ -43,7 +34,7 @@ module Path = struct
     | Pident _, Pdot _ -> false
     | Pident _, Papply _ -> false
     | Pdot _, Pident _ -> false
-    | Pdot(parent1, name1, _), Pdot(parent2, name2, _) ->
+    | Pdot(parent1, name1), Pdot(parent2, name2) ->
         equal parent1 parent2
         && String.equal name1 name2
     | Pdot _, Papply _ -> false
@@ -59,7 +50,7 @@ module Path = struct
     | Pident _, Pdot _ -> -1
     | Pident _, Papply _ -> -1
     | Pdot _, Pident _ -> 1
-    | Pdot(parent1, name1, _), Pdot(parent2, name2, _) ->
+    | Pdot(parent1, name1), Pdot(parent2, name2) ->
         let c = compare parent1 parent2 in
         if c <> 0 then c
         else String.compare name1 name2
@@ -333,7 +324,7 @@ end = struct
   let child md name desc deprecated =
     let origin = Module.raw_origin md in
     let sort = Module.raw_sort md in
-    let path = Path.Pdot(Module.raw_path md, name, 0) in
+    let path = Path.Pdot(Module.raw_path md, name) in
     let hidden = hidden_definition deprecated name in
     let definition = definition_of_desc desc in
     Definition { origin; path; hidden; sort; definition }
@@ -483,7 +474,7 @@ end = struct
   let child md name desc deprecated =
     let origin = Module.raw_origin md in
     let sort = Module.raw_sort md in
-    let path = Path.Pdot(Module.raw_path md, name, 0) in
+    let path = Path.Pdot(Module.raw_path md, name) in
     let hidden = hidden_definition deprecated name in
     let definition = definition_of_desc desc in
     Definition { origin; path; hidden; sort; definition }
@@ -622,7 +613,7 @@ end = struct
   let child md name desc deprecated =
     let origin = Module.raw_origin md in
     let sort = Module.raw_sort md in
-    let path = Path.Pdot (Module.raw_path md, name, 0) in
+    let path = Path.Pdot (Module.raw_path md, name) in
     let hidden = hidden_definition deprecated name in
     let definition =
       match desc with
@@ -798,7 +789,7 @@ end = struct
   let child md name desc deprecated =
     let origin = Module.raw_origin md in
     let sort = Module.raw_sort md in
-    let path = Path.Pdot(Module.raw_path md, name, 0) in
+    let path = Path.Pdot(Module.raw_path md, name) in
     let hidden = hidden_definition deprecated name in
     let definition =
       match desc with
@@ -1390,7 +1381,7 @@ end = struct
     match path with
     | Path.Pident id ->
         Ident_map.find id t.modules
-    | Path.Pdot(p, name, _) ->
+    | Path.Pdot(p, name) ->
         let md = find_module t p in
         Module.find_module t md name
     | Path.Papply(p, arg) ->
@@ -1401,7 +1392,7 @@ end = struct
     match path with
     | Path.Pident id ->
         Ident_map.find id t.types
-    | Path.Pdot(p, name, _) ->
+    | Path.Pdot(p, name) ->
         let md = find_module t p in
         Module.find_type t md name
     | Path.Papply _ ->
@@ -1411,7 +1402,7 @@ end = struct
     match path with
     | Path.Pident id ->
         Ident_map.find id t.class_types
-    | Path.Pdot(p, name, _) ->
+    | Path.Pdot(p, name) ->
         let md = find_module t p in
         Module.find_class_type t md name
     | Path.Papply _ ->
@@ -1421,7 +1412,7 @@ end = struct
     match path with
     | Path.Pident id ->
         Ident_map.find id t.module_types
-    | Path.Pdot(p, name, _) ->
+    | Path.Pdot(p, name) ->
         let md = find_module t p in
         Module.find_module_type t md name
     | Path.Papply _ ->
@@ -1464,7 +1455,7 @@ end = struct
 
   let rec is_module_path_visible t = function
     | Path.Pident id -> is_module_ident_visible t id
-    | Path.Pdot(path, _, _) ->
+    | Path.Pdot(path, _) ->
         is_module_path_visible t path
     | Path.Papply(path1, path2) ->
         is_module_path_visible t path1
@@ -1487,7 +1478,7 @@ end = struct
 
   let is_type_path_visible t = function
     | Path.Pident id -> is_type_ident_visible t id
-    | Path.Pdot(path, _, _) -> is_module_path_visible t path
+    | Path.Pdot(path, _) -> is_module_path_visible t path
     | Path.Papply _ ->
         failwith
           "Short_paths_graph.Graph.is_type_path_visible: \
@@ -1510,7 +1501,7 @@ end = struct
 
   let is_class_type_path_visible t = function
     | Path.Pident id -> is_class_type_ident_visible t id
-    | Path.Pdot(path, _, _) -> is_module_path_visible t path
+    | Path.Pdot(path, _) -> is_module_path_visible t path
     | Path.Papply _ ->
         failwith
           "Short_paths_graph.Graph.is_class_type_path_visible: \
@@ -1533,7 +1524,7 @@ end = struct
 
   let is_module_type_path_visible t = function
     | Path.Pident id -> is_module_type_ident_visible t id
-    | Path.Pdot(path, _, _) -> is_module_path_visible t path
+    | Path.Pdot(path, _) -> is_module_path_visible t path
     | Path.Papply _ ->
         failwith
           "Short_paths_graph.Graph.is_module_type_path_visible: \

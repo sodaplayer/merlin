@@ -312,7 +312,7 @@ let type_declaration s decl =
 let class_signature scope s sign =
   { csig_self = typexp scope s sign.csig_self;
     csig_vars =
-      Vars.map (function (m, v, t) -> (m, v, typexp scope s t)) sign.csig_vars;
+      Vars.map ~f:(function (m, v, t) -> (m, v, typexp scope s t)) sign.csig_vars;
     csig_concr = sign.csig_concr;
     csig_inher =
       List.map (fun (p, tl) -> (type_path s p, List.map (typexp scope s) tl))

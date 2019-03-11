@@ -56,7 +56,7 @@ let rename = function
       incr currentstamp;
       Local { name; stamp = !currentstamp }
   | id ->
-      Misc.fatal_errorf "Ident.rename %s" (name id)
+      Misc.fatal_error (Printf.sprintf "Ident.rename %s" (name id))
 
 let unique_name = function
   | Local { name; stamp }

@@ -238,8 +238,8 @@ end
 
 (* Maps of methods and instance variables *)
 
-module Meths : Map.S with type key = string
-module Vars  : Map.S with type key = string
+module Meths : MoreLabels.Map.S with type key = string
+module Vars  : MoreLabels.Map.S with type key = string
 
 (* Value descriptions *)
 
@@ -371,7 +371,7 @@ and type_transparence =
 
 (* Type expressions for the class language *)
 
-module Concr : Set.S with type elt = string
+module Concr : MoreLabels.Set.S with type elt = string
 
 type class_type =
     Cty_constr of Path.t * type_expr list * class_type
