@@ -178,7 +178,7 @@ let char_for_backslash = function
 
 let illegal_escape lexbuf reason =
   let error = Illegal_escape (Lexing.lexeme lexbuf, Some reason) in
-  raise (Error (error, Location.curr lexbuf))
+  fail lexbuf error
 
 let char_for_decimal_code state lexbuf i =
   let c = num_value lexbuf ~base:10 ~first:i ~last:(i+2) in
@@ -191,21 +191,25 @@ let char_for_decimal_code state lexbuf i =
           "%d is outside the range of legal characters (0-255)." c)
   else return (Char.chr c)
 
-let char_for_octal_code lexbuf i =
+let char_for_octal_code state lexbuf i =
   let c = num_value lexbuf ~base:8 ~first:i ~last:(i+2) in
   if (c < 0 || c > 255) then
-    if in_comment ()
-    then 'x'
+    if in_comment state
+    then return 'x'
     else
       illegal_escape lexbuf
         (Printf.sprintf
           "o%o (=%d) is outside the range of legal characters (0-255)." c c)
-  else Char.chr c
+  else return (Char.chr c)
 
 let char_for_hexadecimal_code lexbuf i =
   Char.chr (num_value lexbuf ~base:16 ~first:i ~last:(i+1))
 
 let uchar_for_uchar_escape lexbuf =
+  let illegal_escape lexbuf reason =
+    let error = Illegal_escape (Lexing.lexeme lexbuf, Some reason) in
+    raise (Error (error, Location.curr lexbuf))
+  in
   let len = Lexing.lexeme_end lexbuf - Lexing.lexeme_start lexbuf in
   let first = 3 (* skip opening \u{ *) in
   let last = len - 2 (* skip closing } *) in
@@ -347,7 +351,7 @@ refill {fun k lexbuf -> Refill (fun () -> k lexbuf)}
 rule token state = parse
   | ("\\" as bs) newline {
       match state.preprocessor with
-      | None -> fail fexbuf (Illegal_character bs)
+      | None -> fail lexbuf (Illegal_character bs)
       | Some _ ->
         update_loc lexbuf None 1 false 0;
         token state lexbuf }
@@ -378,7 +382,7 @@ rule token state = parse
       { lABEL (check_label_name lexbuf name) }
   | "~" (lowercase_latin1 identchar_latin1 * as name) ':'
       { warn_latin1 lexbuf;
-        lABEL name }
+        return (LABEL name) }
   | "?"
       { return QUESTION }
   | "??"
@@ -392,7 +396,7 @@ rule token state = parse
               with Not_found ->
               try Hashtbl.find keyword_table name
               with Not_found ->
-                LIDENT s) }
+                LIDENT name) }
   | lowercase_latin1 identchar_latin1 * as name
       { warn_latin1 lexbuf; return (LIDENT name) }
   | uppercase identchar * as name
@@ -402,7 +406,7 @@ rule token state = parse
               try Hashtbl.find keyword_table name
               with Not_found ->
                 UIDENT name) }
-  | uppercase_latin1 identchar_latin1 * is name
+  | uppercase_latin1 identchar_latin1 * as name
     { warn_latin1 lexbuf; return (UIDENT name) }
   | int_literal as lit { return (INT (lit, None)) }
   | (int_literal as lit) (literal_modifier as modif)
@@ -437,13 +441,13 @@ rule token state = parse
   | "\'\\" (['\\' '\'' '\"' 'n' 't' 'b' 'r' ' '] as c) "\'"
     { return (CHAR (char_for_backslash c)) }
   | "\'\\" 'o' ['0'-'3'] ['0'-'7'] ['0'-'7'] "\'"
-    { return (CHAR(char_for_octal_code lexbuf 3)) }
+    { char_for_octal_code state lexbuf 3 >>= fun c -> return (CHAR c) }
   | "\'\\" ['0'-'9'] ['0'-'9'] ['0'-'9'] "\'"
     { char_for_decimal_code state lexbuf 2 >>= fun c -> return (CHAR c) }
   | "\'\\" 'x' ['0'-'9' 'a'-'f' 'A'-'F'] ['0'-'9' 'a'-'f' 'A'-'F'] "\'"
     { return (CHAR (char_for_hexadecimal_code lexbuf 3)) }
   | "\'" ("\\" _ as esc)
-      { fail lexbuf (Illegal_escape esc) }
+      { fail lexbuf (Illegal_escape (esc, None)) }
   | "(*"
       { let start_loc = Location.curr lexbuf in
         state.comment_start_loc <- [start_loc];
@@ -478,7 +482,7 @@ rule token state = parse
       { update_loc lexbuf name (int_of_string num) true 0;
         token state lexbuf
       }
-  | "#"  { return SHARP }
+  | "#"  { return HASH }
   | "&"  { return AMPERSAND }
   | "&&" { return AMPERAMPER }
   | "`"  { return BACKQUOTE }
@@ -586,9 +590,9 @@ and comment state = parse
                  | loc :: _ ->
                    let start = List.hd (List.rev state.comment_start_loc) in
                    state.comment_start_loc <- [];
-                   fail (Unterminated_string_in_comment (start, l)) loc
+                   fail_loc (Unterminated_string_in_comment (start, l)) loc
                end
-             | e -> fail e l
+             | e -> fail_loc e l
            )
         ) >>= fun () ->
       state.string_start_loc <- Location.none;
@@ -609,9 +613,9 @@ and comment state = parse
                  | loc :: _ ->
                    let start = List.hd (List.rev state.comment_start_loc) in
                    state.comment_start_loc <- [];
-                   fail (Unterminated_string_in_comment (start, l)) loc
+                   fail_loc (Unterminated_string_in_comment (start, l)) loc
                end
-             | e -> fail e l
+             | e -> fail_loc e l
            )
         ) >>= fun () ->
         state.string_start_loc <- Location.none;
@@ -641,7 +645,7 @@ and comment state = parse
         | loc :: _ ->
           let start = List.hd (List.rev state.comment_start_loc) in
           state.comment_start_loc <- [];
-          fail (Unterminated_comment start) loc
+          fail_loc (Unterminated_comment start) loc
       }
   | newline
       { update_loc lexbuf None 1 false 0;
@@ -697,7 +701,7 @@ and string state = parse
   | eof
       { let loc = state.string_start_loc in
         state.string_start_loc <- Location.none;
-        fail Unterminated_string loc }
+        fail_loc Unterminated_string loc }
   | _
       { Buffer.add_char state.buffer (Lexing.lexeme_char lexbuf 0);
         string state lexbuf }
@@ -711,7 +715,7 @@ and quoted_string state delim = parse
   | eof
       { let loc = state.string_start_loc in
         state.string_start_loc <- Location.none;
-        fail Unterminated_string loc }
+        fail_loc Unterminated_string loc }
   | "|" lowercase* "}"
       {
         let edelim = Lexing.lexeme lexbuf in
