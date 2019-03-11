@@ -1481,6 +1481,7 @@ and transl_signature ?(keep_warnings = false) env sg =
               Signature_names.check_type names loc decl.clsty_typesharp_id;
             ) classes;
             res
+          with
           | (classes, newenv) ->
             let (trem,rem, final_env) = transl_sig newenv srem in
             let sg =

@@ -133,14 +133,11 @@ let print ~with_scope ppf =
   function
   | Global name -> fprintf ppf "%s!" name
   | Predef { name; stamp = n } ->
-      fprintf ppf "%s%s!" name
-        (if !Clflags.unique_ids then sprintf "/%i" n else "")
+      fprintf ppf "%s/%i!" name n
   | Local { name; stamp = n } ->
-      fprintf ppf "%s%s" name
-        (if !Clflags.unique_ids then sprintf "/%i" n else "")
+      fprintf ppf "%s/%i" name n
   | Scoped { name; stamp = n; scope } ->
-      fprintf ppf "%s%s%s" name
-        (if !Clflags.unique_ids then sprintf "/%i" n else "")
+      fprintf ppf "%s/%i%s" name n
         (if with_scope then sprintf "[%i]" scope else "")
 
 let print_with_scope ppf id = print ~with_scope:true ppf id
@@ -319,7 +316,8 @@ let make_key_generator () =
       decr c ;
       Local { name = key_name; stamp = stamp }
   | global_id ->
-      Misc.fatal_errorf "Ident.make_key_generator () %s" (name global_id)
+      Misc.fatal_error
+        (Printf.sprintf "Ident.make_key_generator () %s" (name global_id))
 
 let compare x y =
   match x, y with
