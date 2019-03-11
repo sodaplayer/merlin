@@ -6,11 +6,9 @@ let syntax_error msg loc : extension =
   let str = Location.mkloc "merlin.syntax-error" loc in
   let payload = PStr [{
       pstr_loc = Location.none;
-      pstr_desc = Pstr_eval ({
-          pexp_loc = Location.none;
-          pexp_desc = Pexp_constant(Parsetree.Pconst_string(msg, None));
-          pexp_attributes = [];
-        }, []);
+      pstr_desc = Pstr_eval (
+        Ast_helper.(Exp.constant (const_string msg)), []
+      );
     }]
   in
   (str, payload)
@@ -38,7 +36,7 @@ let syntax_error msg loc : extension =
 *)
 let relaxed_location loc : attribute =
   let str = Location.mkloc "merlin.relaxed-location" loc in
-  (str, PStr [])
+  Ast_helper.Attr.mk str (PStr [])
 ;;
 
 
@@ -50,7 +48,7 @@ let relaxed_location loc : attribute =
     js_of_ocaml constructs).
 *)
 let hide_node : attribute =
-  (Location.mknoloc "merlin.hide", PStr [])
+  Ast_helper.Attr.mk (Location.mknoloc "merlin.hide") (PStr [])
 
 (** The converse: when merlin should focus on a specific node of the AST.
     The main use case is also for js_of_ocaml.
@@ -70,7 +68,7 @@ let hide_node : attribute =
     and [M.epilog]), add a [focus_node] attribute to the [M.code] item.
 *)
 let focus_node : attribute =
-  (Location.mknoloc "merlin.focus", PStr [])
+  Ast_helper.Attr.mk (Location.mknoloc "merlin.focus") (PStr [])
 
 (* Projections for merlin attributes and extensions *)
 
